@@ -48,13 +48,13 @@
         let word = getQueryVariable("word");
         let source = getQueryVariable("source")||"qq_music";
         console.log(word)
-        let url=`http://192.168.0.145:3000/music/search?pageNumber=1&pageSize=9&word=${word}&source=${source}`
+        let url=`${window.location.protocol+"//"+window.location.host}/music/search?pageNumber=1&pageSize=9&word=${word}&source=${source}`
         console.log(url)
         axios.get(url).then(infoList => {
             infoList.data.forEach(info => {
                 if (!info.id){console.log(info);return}
-                axios.get(`http://192.168.0.145:3000/music/pay/${info.source}/${info.id}`).then(music => {
-                    axios.get(`http://192.168.0.145:3000/music/lyric/${info.source}/${info.id}`).then(lyric=>{
+                axios.get(`${window.location.protocol+"//"+window.location.host}/music/pay/${info.source}/${info.id}`).then(music => {
+                    axios.get(`${window.location.protocol+"//"+window.location.host}/music/lyric/${info.source}/${info.id}`).then(lyric=>{
                         ap.list.add({
                             name: `${info.name}-${info.albumName}`,
                             artist: info.singer[0].name,

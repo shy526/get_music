@@ -108,7 +108,7 @@ let app = {
             headers: {Host: "c.y.qq.com", Referer: "https://y.qq.com"}
         })
         let data = app.getJsonpData(rep.data, "MusicJsonCallback");
-        if (!data){
+        if (!data||!data.lyric){
            return "";
         }else {
             return Buffer.from(data.lyric, 'base64').toString()
