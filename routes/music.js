@@ -23,21 +23,51 @@ router.get('/', function(req, res, next) {
 });
 
 router.get('/search',async function(req, res, next) {
-  let {pageSize,pageNumber,word,source} = req.query;
-  let musicSource=source? music[source]:music[music.source[0]]
-  let musicList = await musicSource.selectMusic(pageNumber,pageSize,word);
-  res.send(musicList);
+  try {
+    let {pageSize,pageNumber,word,source} = req.query;
+    let musicSource=source? music[source]:music[music.source[0]]
+    if (!musicSource) {
+      res.send(`${source}没有被加载`)
+    }else {
+      res.send( await musicSource.selectMusic(pageNumber,pageSize,word));
+    }
+  }catch (e) {
+    console.log(e)
+  }
+
+
 });
 
 router.get(`/pay/:source/:id`,async function(req, res, next) {
-  let {id,source} = req.params;
-  let musicSource = music[source];
-  if (!musicSource){
-    res.send(`${source}没有被加载`)
-  }else {
-    res.send(await musicSource.getMusicUrl(id))
+  try {
+    let {id,source} = req.params;
+    let musicSource = music[source];
+    if (!musicSource){
+      res.send(`${source}没有被加载`)
+    }else {
+      res.send(await musicSource.getMusicUrl(id))
+    }
+  }catch (e) {
+    console.log(e)
   }
+
 })
+
+router.get(`/lyric/:source/:id`,async function(req, res, next) {
+  try {
+    let {id,source} = req.params;
+    let musicSource = music[source];
+    if (!musicSource){
+      res.send(`${source}没有被加载`)
+    }else {
+      res.send(await musicSource.getLyric(id))
+    }
+  }catch (e) {
+    console.log(e)
+  }
+
+})
+
 router.get(`/source`,(req,res,next)=>{
   res.send( music.source)
 })

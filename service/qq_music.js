@@ -25,6 +25,7 @@ let app = {
                 vid: item.vid,
                 grp: grp,
                 singer: singers,
+                cover:item.albummid&&`https://y.gtimg.cn/music/photo_new/T002R300x300M000${item.albummid}.jpg?max_age=2592000`,
                 source: path.parse(__filename).name
             })
         }
@@ -61,8 +62,7 @@ let app = {
         let url = `https://c.y.qq.com/soso/fcgi-bin/client_search_cp?aggr=1&cr=1&flag_qc=0&p=${pageNumber}&n=${pageSize}&w=${global.encodeURI(word)}`
         let rep = await axios.get(url);
         rep.data = this.getJsonpData(rep.data);
-        let musicList = await this.getMusicInfo(rep.data.data.song.list);
-        return musicList;
+        return await this.getMusicInfo(rep.data.data.song.list);
     },
     getMvUrl: async (mvId) => {
         let data = {"getMvUrl": {"module": "gosrf.Stream.MvUrlProxy", "method": "GetMvUrls", "param": {"vids": []}}}
@@ -107,8 +107,13 @@ let app = {
         let rep = await axios.get(`https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg?songmid=${songId}`, {
             headers: {Host: "c.y.qq.com", Referer: "https://y.qq.com"}
         })
-        let data = app.getJsonpData(rep, "MusicJsonCallback");
-        return Buffer.from(data.lyric, 'base64').toString()
+        let data = app.getJsonpData(rep.data, "MusicJsonCallback");
+        if (!data){
+           return "";
+        }else {
+            return Buffer.from(data.lyric, 'base64').toString()
+        }
+
     }
 
 }

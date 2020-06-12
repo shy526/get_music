@@ -26,11 +26,12 @@ let app = {
     },
     __getSign: null,
     __minTime: null,
-    __signPath: path.join(path.join(path.resolve(__dirname,".."),"sign"),"xiami.sign"),
+    __signPath: path.join(path.join(path.resolve(__dirname, ".."), "sign"), "xiami.sign"),
+    __selectMusicFlag: false,
     getCookie: function (rep) {
 
         let setCookies = rep.headers["set-cookie"];
-        if (!setCookies){
+        if (!setCookies) {
             return;
         }
         let cookieX = ""
@@ -103,14 +104,14 @@ let app = {
         })
         return url;
     },
-    selectMusic2: async (pageNumber, pageSize, word) => {
+    selectMusicBack: async (pageNumber, pageSize, word) => {
         let _q = {"key": word, "pagingVO": {"page": pageNumber, "pageSize": pageSize}};
         let _qStr = JSON.stringify(_q);
         let urlObj = URL.parse(`https://www.xiami.com/api/search/searchSongs?_q=${_qStr}`, true);
         let _s = await app.getSign(urlObj)
         urlObj.query = null;
         urlObj.search = null;
-        let url=`${URL.format(urlObj)}?_q=${global.encodeURI(_qStr)}&_s=${_s}`;
+        let url = `${URL.format(urlObj)}?_q=${global.encodeURI(_qStr)}&_s=${_s}`;
         let rep = await axios.get(url, {
                 headers: {
                     cookie: app.__getSign
@@ -121,46 +122,68 @@ let app = {
         try {
             return app.getMusicInfo(rep.data.result.data.songs)
         } catch (e) {
-            console.error("虾米---------ip-------------限制")
-            console.error(url)
+            app.__selectMusicFlag = false;
+            console.error("虾米---------ip-------------限制==> 切换搜索方案")
+            console.error(`搜索方案备选:${url}`)
         }
     },
-    selectMusic: async (pageNumber,pageSize, word) => {
-        let query = {"searchKey": word}
-        let url = `https://www.xiami.com/list?scene=search&type=song&query=${global.encodeURI(JSON.stringify(query))}&page=${pageNumber}`
-        let rep = await axios.get(url);
-        let cookie = app.getCookie(rep);
-        if (cookie===undefined){
-            console.error("cookie is null")
-            console.error(url)
+    selectMusic: async (pageNumber, pageSize, word) => {
+        if (app.__selectMusicFlag) {
+            return await app.selectMusicBack(pageNumber, pageSize, word)
         }
+        let query = {"searchKey": word}
+        let url = `https://www.xiami.com/list?page=${pageNumber}&scene=search&type=song&query=${global.encodeURI(JSON.stringify(query))}`
+        let rep = await axios.get(url, {
+            headers: {host: URL.parse(url).host, cookie: app.__getSign},
+        });
+        let cookie = app.getCookie(rep);
+        if (cookie !== undefined) {
+            let split = app.__getSign.split(";");
+            let cookieResult=[];
+            split.forEach(item=>{
+                let keyValue = item.split("=");
+                let reg = `(?:^|;\\s*)${keyValue[0]}=([^;]*)`;
+                let match = cookie.match(reg);
+                if (match&&match.length>2){
+                    cookieResult.push(match[0].replace(";",""))
+                }else {
+                    cookieResult.push(item)
+                }
+            })
+            cookie=cookieResult.join(";");
+        }else {
+            cookie=app.__getSign;
+        }
+
         let $ = cheerio.load(rep.data);
         let reg = /window.__PRELOADED_STATE__="(.*)"/
-        let result=null;
+        let result = null;
         $("script").each((index, el) => {
             let html = $(el).html();
-            if (html){
+            if (html) {
                 html = html.replace(/ /g, '');
                 let match = html.match(reg);
-                if (match){
-                    result=  Buffer.from(match[1], 'base64').toString()
+                if (match) {
+                    result = Buffer.from(match[1], 'base64').toString()
                     return false
                 }
             }
         })
-        if (!result){
-            console.error("虾米---------ip-------------限制")
-            console.error(url)
-            return [];
+        if (!result) {
+            app.__selectMusicFlag = true;
+            console.error("虾米---------ip-------------限制==> 切换搜索方案备选")
+            console.error(`搜索方案:${url}`)
+            return await app.selectMusicBack(pageNumber, pageSize, word)
         }
-        let songIds = JSON.parse(result).listData.dataList.map(item=>item.songId);
+        let songIds = JSON.parse(result).listData.dataList.map(item => item.songId);
         let urlObj = URL.parse("https://www.xiami.com/api/song/getSongs")
         let _s = await app.getSign(urlObj);
-        let _xm_cf_ = app.__getSign.match(`(?:^|;\\s*)_xm_cf_=([^;]*)`)[0];
+        let _xm_cf_ = cookie.match(`(?:^|;\\s*)_xm_cf_=([^;]*)`)[0];
         let songs = await axios.post(`${URL.format(urlObj)}?_s=${_s}&${_xm_cf_}`, {"songIds": songIds},
-            {headers: {host: urlObj.host, cookie: cookie}
+            {
+                headers: {host: urlObj.host, cookie: cookie}
             })
-          return app.getMusicInfo(songs.data.result.data.songs);
+        return app.getMusicInfo(songs.data.result.data.songs);
 
     },
     getMusicInfo: (list) => {
@@ -179,10 +202,11 @@ let app = {
                 name: item.songName, //歌曲名称
                 albumName: item.albumName, //专辑
                 one: false, //是否独占
-                vip: item.songStatus===7, //是否需要vip或者无版权
-                vid: item.mvId?item.mvId:null,//mvId
+                vip: item.songStatus === 7, //是否需要vip或者无版权
+                vid: item.mvId ? item.mvId : null,//mvId
                 grp: null, //备选方案
                 singer: singers, //歌手
+                cover:item.albumLogo,
                 source: path.parse(__filename).name
             })
         })
@@ -198,6 +222,13 @@ let app = {
                 , Host: urlObj.host
             }
         });
+        try {
+            console.log(rep.data.result.data.lyrics[1].content)
+        }catch (e) {
+            console.log(`ip==>限制<==${id}`)
+            return "";
+        }
+
         return rep.data.result.data.lyrics[1].content;
     },
     getMvUrl: async (vId) => {

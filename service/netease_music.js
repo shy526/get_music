@@ -28,7 +28,8 @@ let app = {
                 vip: item.copyright === 2, //是否需要vip或者无版权
                 vid: item.mv === 0 ? null : item.mv, //mvId
                 grp: null, //备选方案
-                singer: singers, //歌手
+                singer: singers,//歌手
+                cover:item.al.picUrl, //
                 source: path.parse(__filename).name
             })
         })

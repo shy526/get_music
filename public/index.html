@@ -1,13 +1,75 @@
 <html>
 
 <head>
-  <title>Express</title>
-  <link rel="stylesheet" href="/stylesheets/style.css">
+    <title>Express</title>
+    <link rel="stylesheet" href="/stylesheets/style.css">
+    <link rel="stylesheet" href="/stylesheets/APlayer.min.css">
 </head>
 
 <body>
-  <h1>Express</h1>
-  <p>Welcome to Express</p>
+<div id="player"></div>
 </body>
 
 </html>
+
+<script src="/stylesheets/APlayer.min.js"></script>
+<script src="/stylesheets/axios.js"></script>
+<script>
+    window.onload = () => {
+        const ap = new APlayer({
+            container: document.getElementById('player'),
+            mini: false,
+            autoplay: false,
+            theme: '#FADFA3',
+            loop: 'all',
+            order: 'random',
+            preload: 'auto',
+            volume: 0.7,
+            mutex: true,
+            listFolded: false,
+            listMaxHeight: 90,
+            lrcType: 1,
+            audio: []
+        });
+
+
+        function getQueryVariable(variable) {
+            var query = window.location.search.substring(1);
+            var vars = query.split("&");
+            for (var i = 0; i < vars.length; i++) {
+                var pair = vars[i].split("=");
+                if (pair[0] == variable) {
+                    return pair[1];
+                }
+            }
+            return (false);
+        }
+
+        let word = getQueryVariable("word");
+        let source = getQueryVariable("source")||"qq_music";
+        console.log(word)
+        let url=`http://192.168.0.145:3000/music/search?pageNumber=1&pageSize=9&word=${word}&source=${source}`
+        console.log(url)
+        axios.get(url).then(infoList => {
+            infoList.data.forEach(info => {
+                if (!info.id){console.log(info);return}
+                axios.get(`http://192.168.0.145:3000/music/pay/${info.source}/${info.id}`).then(music => {
+                    axios.get(`http://192.168.0.145:3000/music/lyric/${info.source}/${info.id}`).then(lyric=>{
+                        ap.list.add({
+                            name: `${info.name}-${info.albumName}`,
+                            artist: info.singer[0].name,
+                            url: music.data[0],
+                            lrc: lyric.data,
+                            cover: info.cover,
+                            theme: '#ebd0c2'
+                        });
+                    })
+
+                })
+
+            })
+        })
+    }
+
+
+</script>
