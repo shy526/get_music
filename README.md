@@ -2,7 +2,6 @@
 
 
 
-
 ## api
 
 ### 问题
@@ -23,3 +22,6 @@
 - http://localhost:3000/music/pay/{source}/{id}
   - source 音乐源
   - id 音乐源所对应的Id
+
+## 没时间搞了,弃坑
+- js代码写的烂 emmmmmmm
